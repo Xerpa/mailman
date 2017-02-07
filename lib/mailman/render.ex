@@ -87,16 +87,27 @@ defmodule Mailman.Render do
   end
 
   def headers_for(email) do
-    [
+    tracking_id = :erlang.get(:fuleragem_tracking_id)
+    headers = [
       { "From", email.from },
       { "To", email.to |> normalize_addresses |> Enum.join(",") },
       { "Subject", email.subject },
       { "reply-to", email.reply_to },
       { "Cc",  email.cc |> as_list |> normalize_addresses |> Enum.join(", ") |> as_list },
-      { "Bcc", email.bcc |> as_list |> normalize_addresses |> Enum.join(", ") |> as_list }
-    ] |> Enum.filter(fn(i) -> elem(i, 1) != [] end)
-  end
+      { "Bcc", email.bcc |> as_list |> normalize_addresses |> Enum.join(", ") |> as_list },
+    ]
 
+    headers =
+      case tracking_id do
+        :undefined -> headers
+        _otherwise -> headers ++ [{ "X-Mailgun-Variables", "{\"tracking_id\":#{tracking_id}}" }]
+      end
+
+    Enum.filter(headers, fn {_name, value} ->
+      value != []
+    end)
+  end
+  
   def as_list(value) when is_list(value) do
     value
   end
